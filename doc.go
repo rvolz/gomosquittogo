@@ -31,6 +31,7 @@ Receive messages:
 	defer client.Close()
 	client.Name("test client")
 	client.Connect()
+	client.Subscribe("test")
 	go func(incoming <-chan *MosquittoMessage, control <-chan bool) {
 		for {
 			select {

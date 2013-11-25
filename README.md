@@ -5,7 +5,7 @@ gomosquittogo is a Go (cgo) wrapper for the client library of the Mosquitto MQTT
 
 ## Building
 
-This project was built and tested with Go 1.1 and libmosquitto 1.2. cgo support is required to build it:
+This project was built and tested with Go 1.1 and libmosquitto 1.2. cgo support and an installed libmosquitto is required to build it:
 
     go get github.com/rvolz/gomosquittogo
 
@@ -19,12 +19,12 @@ Most tests assume that a local (127.0.0.1) Mosquitto instance is available.
 
 ## Using
 
-The library consists of two packages. The main package `gomosquittogo` provides a high-level client for MQTT communication. The `core` package contains low-level wrappers for many libmosquitto API functions. If the functionality of the high-level client is not adequate for your needs, just use core package to create your own.
+The library consists of two packages. The main package `gomosquittogo` provides a high-level client for MQTT communication. The `core` package contains low-level wrappers for many libmosquitto API functions. If the functionality of the high-level client is not adequate for your needs, just use the core package to create your own.
 
-The library is in an early development stage. It provides functionality to send and receive MQTT messages. Other functions like authentication, SSL, wills will follow.
+The library is in an early development stage. It provides functionality to send and receive MQTT messages. Other functions like authentication, SSL, wills ... will follow.
 
 
-Some examples:
+### Examples
 
 
 Create an anonymous client for a broker and send a string:
@@ -51,6 +51,7 @@ Receive messages:
 	defer client.Close()
 	client.Name("test client")
 	client.Connect()
+	client.Subscribe("test")
 	go func(incoming <-chan *MosquittoMessage, control <-chan bool) {
 		for {
 			select {

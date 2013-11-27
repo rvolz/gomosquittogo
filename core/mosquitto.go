@@ -104,23 +104,23 @@ func (e Errno) Error() string {
 
 // Defined return values
 var (
-	ErrConnPending  error = Errno(-1)
-	Success         error = Errno(0) // Success value
-	ErrNoMem        error = Errno(1) // No memory
-	ErrProtocol     error = Errno(2) // Protocol error
-	ErrInVal        error = Errno(3) // Bad input values
-	ErrNoCon        error = Errno(4) // Not connected
-	ErrConnRefused  error = Errno(5) // Connection refused
-	ErrNotFound     error = Errno(6) // Host/Port not found
-	ErrConnLost     error = Errno(7) // Connection lost
-	ErrTls          error = Errno(8) // TLS Error
-	ErrPayloadSize  error = Errno(9) // Payload is too large
-	ErrNotSupported error = Errno(10)
-	ErrAuth         error = Errno(11)
-	ErrAclDenied    error = Errno(12)
-	ErrUnknown      error = Errno(13)
-	ErrErrNo        error = Errno(14) // System error
-	ErrErrEai       error = Errno(15)
+	ErrConnPending  error = Errno(C.MOSQ_ERR_CONN_PENDING)
+	Success         error = Errno(C.MOSQ_ERR_SUCCESS)      // Success value
+	ErrNoMem        error = Errno(C.MOSQ_ERR_NOMEM)        // No memory
+	ErrProtocol     error = Errno(C.MOSQ_ERR_PROTOCOL)     // Protocol error
+	ErrInVal        error = Errno(C.MOSQ_ERR_INVAL)        // Bad input values
+	ErrNoCon        error = Errno(C.MOSQ_ERR_NO_CONN)      // Not connected
+	ErrConnRefused  error = Errno(C.MOSQ_ERR_CONN_REFUSED) // Connection refused
+	ErrNotFound     error = Errno(C.MOSQ_ERR_NOT_FOUND)    // Host/Port not found
+	ErrConnLost     error = Errno(C.MOSQ_ERR_CONN_LOST)    // Connection lost
+	ErrTls          error = Errno(C.MOSQ_ERR_TLS)          // TLS Error
+	ErrPayloadSize  error = Errno(C.MOSQ_ERR_PAYLOAD_SIZE) // Payload is too large
+	ErrNotSupported error = Errno(C.MOSQ_ERR_NOT_SUPPORTED)
+	ErrAuth         error = Errno(C.MOSQ_ERR_AUTH)
+	ErrAclDenied    error = Errno(C.MOSQ_ERR_ACL_DENIED)
+	ErrUnknown      error = Errno(C.MOSQ_ERR_UNKNOWN)
+	ErrErrNo        error = Errno(C.MOSQ_ERR_ERRNO) // OS error
+	ErrErrEai       error = Errno(C.MOSQ_ERR_EAI)
 )
 
 // Initialize the library

@@ -63,6 +63,34 @@ func TestConnect(t *testing.T) {
 	mosq.DestroyInstance()
 }
 
+func TestConnect_WithWill(t *testing.T) {
+	defer Cleanup()
+	mosq := NewInstance(nil)
+	if mosq == nil {
+		t.Errorf("NewInstance() shouldn't be nil")
+	}
+	host := "127.0.0.1"
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	mosq.SetWillMessage("test-will-bytes", ([]byte)("If you read this my connection died ..."), QosAssuredDelivery, false)
+	status := mosq.SetWill()
+	if status != Success {
+		t.Errorf("Unable to set will: %v", status)
+	}
+	statusc := mosq.Connect(host, 0, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	status2 := mosq.ClearWill()
+	if status2 != Success {
+		t.Errorf("Unable to clear will: %v", status2)
+	}
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
 func TestDisconnect(t *testing.T) {
 	defer Cleanup()
 	mosq := NewInstance(nil)

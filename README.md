@@ -21,7 +21,7 @@ Most tests assume that a local (127.0.0.1) Mosquitto instance is available.
 
 The library consists of two packages. The main package `gomosquittogo` provides a high-level client for MQTT communication. The `core` package contains low-level wrappers for many libmosquitto API functions. If the functionality of the high-level client is not adequate for your needs, just use the core package to create your own.
 
-The library is in an early development stage. It provides functionality to send and receive MQTT messages. Other functions like authentication, SSL, wills ... will follow.
+The library is in an early development stage. It provides functionality to send and receive MQTT messages. Other functions like authentication, SSL ... will follow.
 
 
 ### Examples

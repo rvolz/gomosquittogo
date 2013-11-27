@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// MQTT client definition
 type Client struct {
 	broker string // hostname of the broker
 	port   int    // port number of the broker
@@ -23,6 +24,7 @@ type Client struct {
 	subscribed      bool
 	subscriptions   map[string]uint
 	data            *core.MosquittoCallbackData
+	will            *core.MosquittoMessage
 }
 
 // Create a new Mosquitto client. The parameter "broker" is the net address
@@ -48,6 +50,7 @@ func NewClient(broker string, messages chan<- *core.MosquittoMessage) *Client {
 }
 
 // Close must always be called to terminate connections and free resources.
+// Will unsubscribe and clear wills if necessary.
 func (client *Client) Close() {
 	log.Println("Client Closing")
 	if client.subscribed && !client.cleanSession {
@@ -61,6 +64,11 @@ func (client *Client) Close() {
 		client.mosquitto.StopMessageCallback()
 		dstatus := client.mosquitto.Disconnect()
 		log.Println("Client disconnected: ", dstatus)
+		// Clear the will, if there is one, to free the memory
+		if client.will != nil {
+			client.will = nil
+			client.mosquitto.ClearWill()
+		}
 	}
 	if client.clientCreated {
 		statusStop := client.mosquitto.StopLoop(false)
@@ -118,6 +126,10 @@ func (client *Client) Connect() bool {
 		if client.mosquitto != nil {
 			client.clientCreated = true
 			client.mosquitto.StartLoop()
+			if client.will != nil {
+				client.mosquitto.SetWillMessage(client.will.Topic, client.will.Payload, client.will.QoS, client.will.Retained)
+				client.mosquitto.SetWill()
+			}
 		} else {
 			return false
 		}
@@ -202,4 +214,36 @@ func (client *Client) SendString(topic string, payload string, qos int, retain b
 	} else {
 		return core.ErrNoCon
 	}
+}
+
+// Set a byte buffer as a will for a topic. Will messages will be sent to the topic
+// subscribers by the broker if the connection to the client dies unexpectedly.
+// Will messages must be set before connecting. Parameters:
+// 	- topic: name of the broker topic
+// 	- payload: the bytes to send
+// 	- qos: QoS level required for sending the message
+// 	- retain: if true the broker will retain (keep) the message
+func (client *Client) WillBytes(topic string, payload []byte, qos int, retain bool) error {
+	if !client.clientConnected {
+		client.will = new(core.MosquittoMessage)
+		client.will.Topic = topic
+		client.will.Payload = payload
+		client.will.PayloadLen = uint(len(payload))
+		client.will.QoS = qos
+		client.will.Retained = retain
+		return core.Success
+	} else {
+		return core.ErrConnPending
+	}
+}
+
+// Convenience method to set a string as a will for a topic. Will messages will be sent to the topic
+// subscribers by the broker if the connection to the client dies unexpectedly.
+// Will messages must be set before connecting. Parameters:
+// 	- topic: name of the broker topic
+// 	- payload: the string to send
+// 	- qos: QoS level required for sending the message
+// 	- retain: if true the broker will retain (keep) the message
+func (client *Client) WillString(topic string, payload string, qos int, retain bool) error {
+	return client.WillBytes(topic, ([]byte)(payload), qos, retain)
 }

@@ -60,6 +60,32 @@ func TestClientConnect(t *testing.T) {
 	client1.Close()
 }
 
+func TestClientConnect_WithWillString(t *testing.T) {
+	client1 := NewClient(defaultBroker, nil)
+	status := client1.WillString("client-test-will-string", "If you read this my connection died ...", core.QosAssuredDelivery, false)
+	if status != core.Success {
+		t.Error("Setting a string will did not work ", status)
+	}
+	statusc := client1.Connect()
+	if !statusc {
+		t.Error("Client with will string not connected", statusc)
+	}
+	client1.Close()
+}
+
+func TestClientConnect_WithWillBytes(t *testing.T) {
+	client1 := NewClient(defaultBroker, nil)
+	status := client1.WillBytes("client-test-will-bytes", ([]byte)("If you read this my connection died ..."), core.QosAssuredDelivery, false)
+	if status != core.Success {
+		t.Error("Setting a bytes will did not work ", status)
+	}
+	statusc := client1.Connect()
+	if !statusc {
+		t.Error("Client with will bytes not connected", statusc)
+	}
+	client1.Close()
+}
+
 func TestClientSubscribe(t *testing.T) {
 	msgs := make(chan *core.MosquittoMessage, 1)
 	client1 := NewClient(defaultBroker, msgs)
@@ -109,7 +135,6 @@ func TestClientLoopAsync(t *testing.T) {
 				break
 			case y := <-control:
 				if y == true {
-					fmt.Println("Reader: Stopped")
 					return
 				}
 				break
@@ -118,7 +143,6 @@ func TestClientLoopAsync(t *testing.T) {
 	}(msgs, controlR)
 	time.Sleep(1 * time.Second)
 	client1.SendString("test2", "Hello World", core.QosFireAndForget, false)
-	fmt.Printf("sent\n")
 	time.Sleep(10 * time.Second)
 	controlR <- true
 	client1.Close()
@@ -146,7 +170,6 @@ func TestClientSendBytes(t *testing.T) {
 				}
 			case y := <-control:
 				if y == true {
-					fmt.Println("Reader: Stopped")
 					return
 				}
 			}
@@ -154,7 +177,6 @@ func TestClientSendBytes(t *testing.T) {
 	}(msgs, controlR)
 	time.Sleep(1 * time.Second)
 	client1.SendBytes("test2", content, core.QosFireAndForget, false)
-	fmt.Printf("sent\n")
 	time.Sleep(10 * time.Second)
 	controlR <- true
 	client1.Close()

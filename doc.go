@@ -7,10 +7,13 @@ Package gomosquittogo provides, as the name might imply, a Go language wrapper
 http://mosquitto.org/man/mqtt-7.html for more information about the terminology
 used here.
 
+The package contains a high-level client. The more flexible, low-level wrappers of
+the Mosquitto client library are contained in subpackage gomosquittogo/core.
+
 Create an anonymous client for a broker and send a string:
 
 	client := NewClient("127.0.0.1", nil)
-	defer client.Close()
+	defer client.Close()b
 	client.Connect()
 	client.SendString("my topic","this is my message")
 

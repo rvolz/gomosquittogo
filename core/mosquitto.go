@@ -52,6 +52,8 @@ type MosquittoClient struct {
 	port      int                  // current port on host if connected
 	control   chan *ControlMessage // input channel for control messages from callbacks
 	will      *willMessage         // a will message for the topic
+	user      *C.char              // user name for authentication
+	password  *C.char              // password name for authentication
 }
 
 // Content for a MQTT will message. These are defined per topic and
@@ -300,6 +302,26 @@ func (client *MosquittoClient) ClearWill() error {
 		status := C.mosquitto_will_clear(m)
 		C.free(unsafe.Pointer(client.will.ctopic))
 		client.will = nil
+		return Errno(status)
+	} else {
+		return Success
+	}
+}
+
+// Set the authentication data for the broker. Must be called before Connect().
+// Use empty strings to delete the current data. An empty user name disables authentication.
+func (client *MosquittoClient) SetLoginData(user string, password string) error {
+	m := (*C.struct_mosquitto)(client.instance)
+	C.free(unsafe.Pointer(client.password))
+	C.free(unsafe.Pointer(client.user))
+	if user != "" {
+		client.user = C.CString(user)
+	}
+	if password != "" {
+		client.password = C.CString(password)
+	}
+	if user != "" {
+		status := C.mosquitto_username_pw_set(m, client.user, client.password)
 		return Errno(status)
 	} else {
 		return Success

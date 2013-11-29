@@ -23,6 +23,8 @@ The library consists of two packages. The main package `gomosquittogo` provides 
 
 The library is in an early development stage. It provides functionality to send and receive MQTT messages. Other functions like authentication, SSL ... will follow.
 
+API Documentation: [![GoDoc](http://godoc.org/github.com/rvolz/gomosquittogo?status.png)](http://godoc.org/github.com/rvolz/gomosquittogo)
+
 
 ### Examples
 

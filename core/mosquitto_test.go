@@ -91,6 +91,86 @@ func TestConnect_WithWill(t *testing.T) {
 	mosq.DestroyInstance()
 }
 
+func TestSetLoginData_Good(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	mosq := NewNamedInstance("test", true, nil)
+	status := mosq.SetLoginData("test", "test")
+	if status != Success {
+		t.Errorf("Setting empty login data failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, 0, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
+func TestSetLoginData_Bad(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	mosq := NewNamedInstance("test", true, nil)
+	status := mosq.SetLoginData("test", "test2")
+	if status != Success {
+		t.Errorf("Setting empty login data failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, 0, 10)
+	if statusc != ErrNoCon {
+		t.Errorf("Connect(%v) should fail, got %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
+func TestSetLoginData_Empty(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	mosq := NewNamedInstance("test", true, nil)
+	status := mosq.SetLoginData("", "")
+	if status != Success {
+		t.Errorf("Setting empty login data failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, 0, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
+func TestSetLoginData_EmptyUser(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	mosq := NewNamedInstance("test", true, nil)
+	status := mosq.SetLoginData("", "password")
+	if status != Success {
+		t.Errorf("Setting empty login data failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, 0, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
 func TestDisconnect(t *testing.T) {
 	defer Cleanup()
 	mosq := NewInstance(nil)

@@ -3,7 +3,8 @@
 
 /*
 Tests for the Mosquitto MQTT Go wrapper.
-Needs a local Mosquitto instance.
+Needs a local Mosquitto instance with at least one user (test/test)
+for testing the login.
 */
 package gomosquittogo
 
@@ -82,6 +83,17 @@ func TestClientConnect_WithWillBytes(t *testing.T) {
 	statusc := client1.Connect()
 	if !statusc {
 		t.Error("Client with will bytes not connected", statusc)
+	}
+	client1.Close()
+}
+
+func TestClientConnect_WithLogin(t *testing.T) {
+	client1 := NewClient(defaultBroker, nil)
+	client1.User("test")
+	client1.Password("test")
+	statusc := client1.Connect()
+	if !statusc {
+		t.Error("Client with will login data not connected", statusc)
 	}
 	client1.Close()
 }

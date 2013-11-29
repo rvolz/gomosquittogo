@@ -25,6 +25,8 @@ type Client struct {
 	subscriptions   map[string]uint
 	data            *core.MosquittoCallbackData
 	will            *core.MosquittoMessage
+	user            string // user name when authentication is required by the broker
+	password        string // password when authentication is required by the broker
 }
 
 // Create a new Mosquitto client. The parameter "broker" is the net address
@@ -105,6 +107,16 @@ func (client *Client) Port(port int) {
 	client.port = port
 }
 
+// Set the user name for authentication if required by the broker.
+func (client *Client) User(user string) {
+	client.user = user
+}
+
+// Set the password for authentication if required by the broker.
+func (client *Client) Password(password string) {
+	client.password = password
+}
+
 // Start the connection to the MQTT broker.
 // Connect wil create the Mosquitto client, start the internal message loop
 // and connect to the broker. If the client as an output channel it will
@@ -126,6 +138,7 @@ func (client *Client) Connect() bool {
 		if client.mosquitto != nil {
 			client.clientCreated = true
 			client.mosquitto.StartLoop()
+			client.mosquitto.SetLoginData(client.user, client.password)
 			if client.will != nil {
 				client.mosquitto.SetWillMessage(client.will.Topic, client.will.Payload, client.will.QoS, client.will.Retained)
 				client.mosquitto.SetWill()

@@ -44,6 +44,19 @@ const (
 	QosAssuredDelivery            // QOS 2
 )
 
+// TLS versions supported by OpenSSL
+const (
+	TlsV1  = "tlsv1"
+	TlsV11 = "tlsv1.1"
+	TlsV12 = "tlsv1.2"
+)
+
+// Certificate verification requirments
+const (
+	SslVerifyNone = 0 // SSL_VERIFY_NONE, no server verification
+	SslVerifyPeer = 1 // SSL_VERFY_PEER, check server certificate and abort if the check fails
+)
+
 // Mosquitto client instance data
 type MosquittoClient struct {
 	instance  unsafe.Pointer
@@ -54,6 +67,7 @@ type MosquittoClient struct {
 	will      *willMessage         // a will message for the topic
 	user      *C.char              // user name for authentication
 	password  *C.char              // password name for authentication
+	psk       *sslPskData          // data for SSL/TLS with pre-shared keys
 }
 
 // Content for a MQTT will message. These are defined per topic and
@@ -64,6 +78,18 @@ type willMessage struct {
 	payload    []byte  // content for the optional will message sent during Connect()
 	qosLevel   int     // QoS level for the message sending
 	retainFlag bool    // should this message be retained?
+}
+
+// Data for SSL/TLS encryption with pre-shared keys
+type sslPskData struct {
+	id          string // PSK ID
+	cid         *C.char
+	psk         string // the key, hexadecimal values
+	cpsk        *C.char
+	tlsVersion  string // TLS version to use
+	ctlsVersion *C.char
+	ciphers     string // OpenSSL ciphers to use, if empty the default ciphers will be used
+	cciphers    *C.char
 }
 
 // MQTT message content
@@ -325,6 +351,55 @@ func (client *MosquittoClient) SetLoginData(user string, password string) error 
 		return Errno(status)
 	} else {
 		return Success
+	}
+}
+
+/*
+Use SSL/TLS with a pre-shared key when connecting to the broker. Encryption is optional,
+but must be configured before CONNECT when used. Make sure to use the right TLS version,
+otherwise you will get a MQTT 'protocol error' or an SSL error like 'no shared cipher'.
+	id - a PSK ID configured in the broker's configuration
+	psk - the actual pre-shared key consisting of hexadecimal values only
+	tlsVersion - the TLS version used, must be identical to the one configured in the broker
+	ciphers - OpenSSL ciphers to use, if empty the defaults will be used
+*/
+func (client *MosquittoClient) UseSslPsk(id string, psk string, tlsVersion string, ciphers string) error {
+	client.ClearSslData()
+	client.psk = new(sslPskData)
+	client.psk.id = id
+	client.psk.cid = C.CString(id)
+	client.psk.psk = psk
+	client.psk.cpsk = C.CString(psk)
+	client.psk.tlsVersion = tlsVersion
+	client.psk.ctlsVersion = C.CString(tlsVersion)
+	if ciphers != "" {
+		client.psk.ciphers = ciphers
+		client.psk.cciphers = C.CString(ciphers)
+	}
+	m := (*C.struct_mosquitto)(client.instance)
+	rc := C.mosquitto_tls_opts_set(m, SslVerifyNone, client.psk.ctlsVersion, client.psk.ctlsVersion)
+	if Errno(rc) != Success {
+		log.Println("Unable to set SSL/TLS options ", rc)
+		return Errno(rc)
+	}
+	rc = C.mosquitto_tls_psk_set(m, client.psk.cpsk, client.psk.cid, client.psk.cciphers)
+	if Errno(rc) != Success {
+		log.Println("Unable to set PSK data for SSL/TLS ", rc)
+		return Errno(rc)
+	} else {
+		return Success
+	}
+
+}
+
+// Delete data used for SSL encryption
+func (client *MosquittoClient) ClearSslData() {
+	if client.psk != nil {
+		C.free(unsafe.Pointer(client.psk.cid))
+		C.free(unsafe.Pointer(client.psk.cpsk))
+		C.free(unsafe.Pointer(client.psk.ctlsVersion))
+		C.free(unsafe.Pointer(client.psk.cciphers))
+		client.psk = nil
 	}
 }
 

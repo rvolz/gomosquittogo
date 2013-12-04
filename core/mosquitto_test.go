@@ -171,6 +171,27 @@ func TestSetLoginData_EmptyUser(t *testing.T) {
 	mosq.DestroyInstance()
 }
 
+func TestUsePsk(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	port := 10884
+	mosq := NewNamedInstance("test", true, nil)
+	status := mosq.UseSslPsk("pid", "deadbeef", TlsV1, "")
+	if status != Success {
+		t.Errorf("Using SSL with PSK failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, port, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
 func TestDisconnect(t *testing.T) {
 	defer Cleanup()
 	mosq := NewInstance(nil)

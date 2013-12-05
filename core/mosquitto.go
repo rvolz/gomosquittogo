@@ -82,13 +82,9 @@ type willMessage struct {
 
 // Data for SSL/TLS encryption with pre-shared keys
 type sslPskData struct {
-	id          string // PSK ID
 	cid         *C.char
-	psk         string // the key, hexadecimal values
 	cpsk        *C.char
-	tlsVersion  string // TLS version to use
 	ctlsVersion *C.char
-	ciphers     string // OpenSSL ciphers to use, if empty the default ciphers will be used
 	cciphers    *C.char
 }
 
@@ -366,14 +362,10 @@ otherwise you will get a MQTT 'protocol error' or an SSL error like 'no shared c
 func (client *MosquittoClient) UseSslPsk(id string, psk string, tlsVersion string, ciphers string) error {
 	client.ClearSslData()
 	client.psk = new(sslPskData)
-	client.psk.id = id
 	client.psk.cid = C.CString(id)
-	client.psk.psk = psk
 	client.psk.cpsk = C.CString(psk)
-	client.psk.tlsVersion = tlsVersion
 	client.psk.ctlsVersion = C.CString(tlsVersion)
 	if ciphers != "" {
-		client.psk.ciphers = ciphers
 		client.psk.cciphers = C.CString(ciphers)
 	}
 	m := (*C.struct_mosquitto)(client.instance)

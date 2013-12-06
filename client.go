@@ -29,15 +29,16 @@ type Client struct {
 	password        string // password when authentication is required by the broker
 }
 
-// Create a new Mosquitto client. The parameter "broker" is the net address
+// Create a new anonymous Mosquitto client. The parameter "broker" is the net address
 // of the MQTT broker you want to connect to. Pass an output channel via "messages"
 // to receive incoming messages. Use nil if you only want to send messages.
 //
-// Besides these the client uses the default settings, which can
-// changed by using the appropriate Setters before connecting:
-// 	- name: will use a generated name to connect to the broker if none is set
-// 	- port: MQTT standard port 1833
+// This method will generate an anonymous client with a generated client name.
+// The "clean session" flag for these clients will be false. See NewNamedClient for
+// an alternative.
 //
+// Besides these the client uses the default settings, which can be
+// changed by using the appropriate Setters before connecting.
 func NewClient(broker string, messages chan<- *core.MosquittoMessage) *Client {
 	client := new(Client)
 	client.name = ""
@@ -48,6 +49,51 @@ func NewClient(broker string, messages chan<- *core.MosquittoMessage) *Client {
 	client.clientCreated = false
 	client.clientConnected = false
 	client.subscriptions = make(map[string]uint)
+	client.data = (*core.MosquittoCallbackData)(nil)
+	if client.messages != nil {
+		client.data = new(core.MosquittoCallbackData)
+		client.data.MessageChannel(client.messages)
+	}
+	client.mosquitto = core.NewInstance(client.data)
+	if client.mosquitto == nil {
+		panic("Unable to create new client")
+	}
+	return client
+}
+
+// Create a new named Mosquitto client. The parameter "broker" is the net address
+// of the MQTT broker you want to connect to. Pass an output channel via "messages"
+// to receive incoming messages. Use nil if you only want to send messages.
+//
+// This method will use the "name" parameter as a client name for connections with
+// the broker. The max. length for client names is 23. "cleanSession" sets the MQTT
+// "clean session" flag. See NewClient for an alternative.
+//
+// Besides these the client uses the default settings, which can be
+// changed by using the appropriate Setters before connecting.
+func NewNamedClient(broker string, messages chan<- *core.MosquittoMessage, name string, cleanSession bool) *Client {
+	client := new(Client)
+	client.name = name
+	client.messages = messages
+	client.broker = broker
+	client.port = core.MqttStandardPort
+	client.cleanSession = cleanSession
+	client.clientCreated = false
+	client.clientConnected = false
+	client.subscriptions = make(map[string]uint)
+	client.data = (*core.MosquittoCallbackData)(nil)
+	if client.messages != nil {
+		client.data = new(core.MosquittoCallbackData)
+		client.data.MessageChannel(client.messages)
+	}
+	if client.name != "" {
+		client.mosquitto = core.NewNamedInstance(client.name, client.cleanSession, client.data)
+		if client.mosquitto == nil {
+			panic("Unable to create new client")
+		}
+	} else {
+		panic("Empty client name")
+	}
 	return client
 }
 
@@ -56,6 +102,7 @@ func NewClient(broker string, messages chan<- *core.MosquittoMessage) *Client {
 func (client *Client) Close() {
 	log.Println("Client Closing")
 	if client.subscribed && !client.cleanSession {
+		log.Println("Client unsubscribing")
 		// Unsubscribe all topics
 		for topic, _ := range client.subscriptions {
 			client.UnsubscribeTopic(topic)
@@ -63,6 +110,7 @@ func (client *Client) Close() {
 		log.Println("Client unsubscribed")
 	}
 	if client.clientConnected {
+		log.Println("Client disconnecting")
 		client.mosquitto.StopMessageCallback()
 		dstatus := client.mosquitto.Disconnect()
 		log.Println("Client disconnected: ", dstatus)
@@ -73,32 +121,19 @@ func (client *Client) Close() {
 		}
 	}
 	if client.clientCreated {
-		statusStop := client.mosquitto.StopLoop(false)
+		log.Println("Client stopping loop")
+		statusStop := client.mosquitto.StopLoop(true)
 		log.Println("Client loop stopped ", statusStop)
 		time.Sleep(100 * time.Millisecond)
+		client.clientCreated = false
+	}
+	if client.mosquitto != nil {
 		log.Println("Destroying Client")
 		client.mosquitto.DestroyInstance()
-		client.clientCreated = false
 		log.Println("Client destroyed")
 	}
 	core.Cleanup()
 	log.Println("Client Closed")
-}
-
-// Set the name of the client that will be used for the connection to the broker.
-// The MQTT max. length for names is 23.
-func (client *Client) Name(name string) {
-	client.name = name
-	client.cleanSession = true
-}
-
-// Set to true if you want to instruct the broker to clear all subscriptions
-// and messages when the client disconnects. Default is false. Can only be
-// set to true if a name was set.
-func (client *Client) CleanSession(cs bool) {
-	if client.name != "" {
-		client.cleanSession = cs
-	}
 }
 
 // Use a different network port for communication with the broker. Default is
@@ -117,6 +152,15 @@ func (client *Client) Password(password string) {
 	client.password = password
 }
 
+// Use SSL/TLS with a pre-shared key. Must be called before Connect().
+//	id - PSK ID
+//	psk - the pre-shared key, hexadecimal characters only
+//	tlsVersion - the OpenSSL TLS version. Use one of the defined constants core.TlsV1, core.TlsV11, core.TlsV12
+// 	ciphers - optional, a list of OpenSSL ciphers, separated by double colons. If empty the default OpenSSL ciphers will be used.
+func (client *Client) SslWithPsk(id string, psk string, tlsVersion string, ciphers string) error {
+	return client.mosquitto.UseSslPsk(id, psk, tlsVersion, ciphers)
+}
+
 // Start the connection to the MQTT broker.
 // Connect wil create the Mosquitto client, start the internal message loop
 // and connect to the broker. If the client as an output channel it will
@@ -125,16 +169,6 @@ func (client *Client) Password(password string) {
 func (client *Client) Connect() bool {
 	// Create the client
 	if client.clientCreated == false {
-		client.data = (*core.MosquittoCallbackData)(nil)
-		if client.messages != nil {
-			client.data = new(core.MosquittoCallbackData)
-			client.data.MessageChannel(client.messages)
-		}
-		if client.name != "" {
-			client.mosquitto = core.NewNamedInstance(client.name, client.cleanSession, client.data)
-		} else {
-			client.mosquitto = core.NewInstance(client.data)
-		}
 		if client.mosquitto != nil {
 			client.clientCreated = true
 			client.mosquitto.StartLoop()

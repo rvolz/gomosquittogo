@@ -18,6 +18,20 @@ import (
 
 var defaultBroker = "127.0.0.1"
 
+func TestClientConnect_WithSslPsk(t *testing.T) {
+	client1 := NewClient(defaultBroker, nil)
+	client1.Port(10884)
+	rc := client1.SslWithPsk("pid", "deadbeef", core.TlsV11, "")
+	if rc != core.Success {
+		t.Error("Setting SSL PSK info failed: ", rc)
+	}
+	statusc := client1.Connect()
+	if !statusc {
+		t.Error("Client using SSL PSK not connected", statusc)
+	}
+	client1.Close()
+}
+
 func TestClientNewClient(t *testing.T) {
 	client1 := NewClient(defaultBroker, nil)
 	defer client1.Close()
@@ -40,10 +54,9 @@ func TestClientClose(t *testing.T) {
 	client2.Close()
 }
 
-func TestClientName(t *testing.T) {
-	client1 := NewClient(defaultBroker, nil)
+func TestClientNewNamedClient(t *testing.T) {
+	client1 := NewNamedClient(defaultBroker, nil, "testClient", true)
 	defer client1.Close()
-	client1.Name("testClient")
 	if client1.name != "testClient" {
 		t.Error("Client name not set")
 	}
@@ -93,16 +106,15 @@ func TestClientConnect_WithLogin(t *testing.T) {
 	client1.Password("test")
 	statusc := client1.Connect()
 	if !statusc {
-		t.Error("Client with will login data not connected", statusc)
+		t.Error("Client with login data not connected", statusc)
 	}
 	client1.Close()
 }
 
 func TestClientSubscribe(t *testing.T) {
 	msgs := make(chan *core.MosquittoMessage, 1)
-	client1 := NewClient(defaultBroker, msgs)
+	client1 := NewNamedClient(defaultBroker, msgs, "testClient", true)
 	defer client1.Close()
-	client1.Name("testClient")
 	client1.Connect()
 	status := client1.SubscribeTopic("test", core.QosFireAndForget)
 	if status != core.Success {
@@ -112,9 +124,8 @@ func TestClientSubscribe(t *testing.T) {
 
 func TestClientUnsubscribe(t *testing.T) {
 	msgs := make(chan *core.MosquittoMessage, 1)
-	client1 := NewClient(defaultBroker, msgs)
+	client1 := NewNamedClient(defaultBroker, msgs, "testClient", true)
 	defer client1.Close()
-	client1.Name("testClient")
 	client1.Connect()
 	client1.SubscribeTopic("test", core.QosFireAndForget)
 	status := client1.UnsubscribeTopic("test")
@@ -126,8 +137,7 @@ func TestClientUnsubscribe(t *testing.T) {
 func TestClientLoopAsync(t *testing.T) {
 	msgs := make(chan *core.MosquittoMessage, 2)
 	controlR := make(chan bool)
-	client1 := NewClient(defaultBroker, msgs)
-	client1.Name("testClient")
+	client1 := NewNamedClient(defaultBroker, msgs, "testClient", true)
 	client1.Connect()
 	client1.SubscribeTopic("test2", core.QosFireAndForget)
 	go func(ch <-chan *core.MosquittoMessage, control <-chan bool) {
@@ -166,8 +176,7 @@ func TestClientSendBytes(t *testing.T) {
 	var content []byte = ([]byte)("Hello World")
 	msgs := make(chan *core.MosquittoMessage, 2)
 	controlR := make(chan bool)
-	client1 := NewClient(defaultBroker, msgs)
-	client1.Name("testClient")
+	client1 := NewNamedClient(defaultBroker, msgs, "testClient", true)
 	client1.Connect()
 	client1.SubscribeTopic("test2", core.QosFireAndForget)
 	go func(ch <-chan *core.MosquittoMessage, control <-chan bool) {

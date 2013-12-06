@@ -12,12 +12,32 @@ import (
 	"time"
 )
 
+func TestUsePsk(t *testing.T) {
+	defer Cleanup()
+	host := "127.0.0.1"
+	port := 10884
+	mosq := NewInstance(nil)
+	status := mosq.UseSslPsk("pid", "deadbeef", TlsV11, "")
+	if status != Success {
+		t.Errorf("Using SSL with PSK failed with %v", status)
+	}
+	mosq.StartLoop()
+	mosq.StartLogCallback()
+	mosq.StartConnectCallback()
+	statusc := mosq.Connect(host, port, 10)
+	if statusc != Success {
+		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
+	}
+	mosq.Disconnect()
+	mosq.StopLoop(false)
+	mosq.DestroyInstance()
+}
+
 func TestVersion(t *testing.T) {
 	const (
 		major = 1
 		minor = 2
 	)
-
 	defer Cleanup()
 	if vmajor, vminor, _ := Version(); vmajor != major || vminor != minor {
 		t.Errorf("Version() = %v.%v, want %v.%v", vmajor, vminor, major, minor)
@@ -154,7 +174,7 @@ func TestSetLoginData_Empty(t *testing.T) {
 func TestSetLoginData_EmptyUser(t *testing.T) {
 	defer Cleanup()
 	host := "127.0.0.1"
-	mosq := NewNamedInstance("test", true, nil)
+	mosq := NewInstance(nil)
 	status := mosq.SetLoginData("", "password")
 	if status != Success {
 		t.Errorf("Setting empty login data failed with %v", status)
@@ -163,27 +183,6 @@ func TestSetLoginData_EmptyUser(t *testing.T) {
 	mosq.StartLogCallback()
 	mosq.StartConnectCallback()
 	statusc := mosq.Connect(host, 0, 10)
-	if statusc != Success {
-		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
-	}
-	mosq.Disconnect()
-	mosq.StopLoop(false)
-	mosq.DestroyInstance()
-}
-
-func TestUsePsk(t *testing.T) {
-	defer Cleanup()
-	host := "127.0.0.1"
-	port := 10884
-	mosq := NewNamedInstance("test", true, nil)
-	status := mosq.UseSslPsk("pid", "deadbeef", TlsV1, "")
-	if status != Success {
-		t.Errorf("Using SSL with PSK failed with %v", status)
-	}
-	mosq.StartLoop()
-	mosq.StartLogCallback()
-	mosq.StartConnectCallback()
-	statusc := mosq.Connect(host, port, 10)
 	if statusc != Success {
 		t.Errorf("Connect(%v) shouldn't fail with %v", host, statusc)
 	}

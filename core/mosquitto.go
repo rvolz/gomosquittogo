@@ -64,8 +64,6 @@ type MosquittoClient struct {
 	host      string               // current hostname if connected
 	port      int                  // current port on host if connected
 	control   chan *ControlMessage // input channel for control messages from callbacks
-	user      *C.char              // user name for authentication
-	password  *C.char              // password name for authentication
 }
 
 // MQTT message content
@@ -285,16 +283,18 @@ func (client *MosquittoClient) ClearWill() error {
 // Use empty strings to delete the current data. An empty user name disables authentication.
 func (client *MosquittoClient) SetLoginData(user string, password string) error {
 	m := (*C.struct_mosquitto)(client.instance)
-	C.free(unsafe.Pointer(client.password))
-	C.free(unsafe.Pointer(client.user))
+	var cuser = (*_Ctype_char)(unsafe.Pointer(nil))
+	var cpassword = (*_Ctype_char)(unsafe.Pointer(nil))
 	if user != "" {
-		client.user = C.CString(user)
+		cuser = C.CString(user)
+		defer C.free(unsafe.Pointer(cuser))
 	}
 	if password != "" {
-		client.password = C.CString(password)
+		cpassword = C.CString(password)
+		defer C.free(unsafe.Pointer(cpassword))
 	}
 	if user != "" {
-		status := C.mosquitto_username_pw_set(m, client.user, client.password)
+		status := C.mosquitto_username_pw_set(m, cuser, cpassword)
 		return Errno(status)
 	} else {
 		return Success

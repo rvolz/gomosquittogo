@@ -93,8 +93,7 @@ func TestConnect_WithWill(t *testing.T) {
 	mosq.StartLoop()
 	mosq.StartLogCallback()
 	mosq.StartConnectCallback()
-	mosq.SetWillMessage("test-will-bytes", ([]byte)("If you read this my connection died ..."), QosAssuredDelivery, false)
-	status := mosq.SetWill()
+	status := mosq.SetWillMessage("test-will-bytes", ([]byte)("If you read this my connection died ..."), QosAssuredDelivery, false)
 	if status != Success {
 		t.Errorf("Unable to set will: %v", status)
 	}

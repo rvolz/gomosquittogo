@@ -64,19 +64,8 @@ type MosquittoClient struct {
 	host      string               // current hostname if connected
 	port      int                  // current port on host if connected
 	control   chan *ControlMessage // input channel for control messages from callbacks
-	will      *willMessage         // a will message for the topic
 	user      *C.char              // user name for authentication
 	password  *C.char              // password name for authentication
-}
-
-// Content for a MQTT will message. These are defined per topic and
-// will be sent to the broker during Connect().
-type willMessage struct {
-	topic      string  // topic for the optional will message
-	ctopic     *C.char // converted topic
-	payload    []byte  // content for the optional will message sent during Connect()
-	qosLevel   int     // QoS level for the message sending
-	retainFlag bool    // should this message be retained?
 }
 
 // MQTT message content
@@ -276,49 +265,20 @@ func (client *MosquittoClient) DestroyInstance() {
 }
 
 // Configure the will message. Must be called before Connect().
-// This function only fills the data structure.
-func (client *MosquittoClient) SetWillMessage(topic string, payload []byte, qos int, retain bool) {
-	if client.will != nil {
-		C.free(unsafe.Pointer(client.will.ctopic))
-		client.will = nil
-	}
-	client.will = new(willMessage)
-	client.will.topic = topic
-	client.will.ctopic = C.CString(topic)
-	client.will.payload = payload
-	client.will.qosLevel = qos
-	client.will.retainFlag = retain
+func (client *MosquittoClient) SetWillMessage(topic string, payload []byte, qos int, retain bool) error {
+	ctopic := C.CString(topic)
+	defer C.free(unsafe.Pointer(ctopic))
+	m := (*C.struct_mosquitto)(client.instance)
+	status := C.mosquitto_will_set(m, ctopic, C.int(len(payload)),
+		unsafe.Pointer(&payload[0]), C.int(qos), C.bool(retain))
+	return Errno(status)
 }
 
-// Configure the will message. Must be called before Connect().
-// This function sets the configured message.
-func (client *MosquittoClient) SetWill() error {
-	if client.will != nil {
-		m := (*C.struct_mosquitto)(client.instance)
-		status := C.mosquitto_will_set(m, client.will.ctopic, C.int(len(client.will.payload)),
-			unsafe.Pointer(&client.will.payload[0]), C.int(client.will.qosLevel),
-			C.bool(client.will.retainFlag))
-		if Errno(status) != Success {
-			C.free(unsafe.Pointer(client.will.ctopic))
-			client.will = nil
-		}
-		return Errno(status)
-	} else {
-		return Success
-	}
-}
-
-// Delete the configured will message for a topic. Must be called to free the memory.
+// Delete the configured will message for a topic.
 func (client *MosquittoClient) ClearWill() error {
 	m := (*C.struct_mosquitto)(client.instance)
-	if client.will != nil {
-		status := C.mosquitto_will_clear(m)
-		C.free(unsafe.Pointer(client.will.ctopic))
-		client.will = nil
-		return Errno(status)
-	} else {
-		return Success
-	}
+	status := C.mosquitto_will_clear(m)
+	return Errno(status)
 }
 
 // Set the authentication data for the broker. Must be called before Connect().

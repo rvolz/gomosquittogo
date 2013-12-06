@@ -76,7 +76,7 @@ func TestClientConnect(t *testing.T) {
 
 func TestClientConnect_WithWillString(t *testing.T) {
 	client1 := NewClient(defaultBroker, nil)
-	status := client1.WillString("client-test-will-string", "If you read this my connection died ...", core.QosAssuredDelivery, false)
+	status := client1.SetWillString("client-test-will-string", "If you read this my connection died ...", core.QosAssuredDelivery, false)
 	if status != core.Success {
 		t.Error("Setting a string will did not work ", status)
 	}
@@ -89,7 +89,7 @@ func TestClientConnect_WithWillString(t *testing.T) {
 
 func TestClientConnect_WithWillBytes(t *testing.T) {
 	client1 := NewClient(defaultBroker, nil)
-	status := client1.WillBytes("client-test-will-bytes", ([]byte)("If you read this my connection died ..."), core.QosAssuredDelivery, false)
+	status := client1.SetWillBytes("client-test-will-bytes", ([]byte)("If you read this my connection died ..."), core.QosAssuredDelivery, false)
 	if status != core.Success {
 		t.Error("Setting a bytes will did not work ", status)
 	}
